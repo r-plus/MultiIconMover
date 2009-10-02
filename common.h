@@ -1,14 +1,12 @@
 /**
- * Name: SpringJumps
- * Type: iPhone OS 2.x SpringBoard extension (MobileSubstrate-based)
- * Description: Allows for the creation of icons that act as shortcuts
- *              to SpringBoard's different icon pages.
+ * Name: Common
+ * Description: a common header for iPhone OS SpringBoard extensions (MobileSubstrate-based)
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2009-01-17 22:19:01
+ * Last-modified: 2009-09-10 21:07:37
  */
 
 /**
- * Copyright (C) 2008  Lance Fetters (aka. ashikase)
+ * Copyright (C) 2008-2009  Lance Fetters (aka. ashikase)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,19 +39,18 @@
  */
 
 
+#include <signal.h>
 #include <substrate.h>
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-#define APP_ID "jp.ashikase.springjumps"
-#define PREFS_FILE "/var/mobile/Library/Preferences/"APP_ID".plist"
-
-#define MAX_PAGES 9
-
 #define HOOK(class, name, type, args...) \
-    static type (*_ ## class ## $ ## name)(class *self, SEL sel, ## args) = NULL; \
+    static type (*_ ## class ## $ ## name)(class *self, SEL sel, ## args); \
     static type $ ## class ## $ ## name(class *self, SEL sel, ## args)
+
+#define LOAD_HOOK(class, sel, imp) \
+    MSHookMessage(class, sel, MSHake(imp))
 
 #define CALL_ORIG(class, name, args...) \
     _ ## class ## $ ## name(self, sel, ## args)

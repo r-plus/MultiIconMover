@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-06-27 01:04:42
+j* Last-modified: 2009-10-03 00:57:26
  */
 
 /**
@@ -44,8 +44,6 @@ j* Last-modified: 2009-06-27 01:04:42
 
 
 #include <sys/time.h>
-
-#import "Common.h"
 
 #import <SpringBoard/SBIcon.h>
 #import <SpringBoard/SBIconController.h>
@@ -130,8 +128,8 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
 
                 // Add a "selected" marker
                 UIImageView *marker = [[UIImageView alloc] initWithImage:checkMarkImage];
-                [marker setOrigin:CGPointMake(40.0f, 39.0f)];
-                [marker setTag:1000];
+                marker.frame = CGRectMake(40.0f, 39.0f, checkMarkImage.size.width, checkMarkImage.size.height);
+                marker.tag = 1000;
                 [icon addSubview:marker];
                 [marker release];
             }
