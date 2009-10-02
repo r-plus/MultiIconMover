@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 03:51:30
+j* Last-modified: 2009-10-03 03:52:23
  */
 
 /**
@@ -50,6 +50,8 @@ j* Last-modified: 2009-10-03 03:51:30
 #import <SpringBoard/SBIconList.h>
 #import <SpringBoard/SBIconModel.h>
 #import <SpringBoard/SpringBoard.h>
+
+#define TAG_CHECKMARK 2000
 
 
 static struct timeval touchesBeganTime = {0, 0};
@@ -141,7 +143,7 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
                 [selectedIcons removeObject:identifier];
 
                 // Remove the "selected" marker
-                [[icon viewWithTag:1000] removeFromSuperview];
+                [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
             } else {
                 // Add icon to list of selected icons
                 [selectedIcons addObject:identifier];
@@ -149,7 +151,7 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
                 // Add a "selected" marker
                 UIImageView *marker = [[UIImageView alloc] initWithImage:checkMarkImage];
                 marker.frame = CGRectMake(40.0f, 39.0f, checkMarkImage.size.width, checkMarkImage.size.height);
-                marker.tag = 1000;
+                marker.tag = TAG_CHECKMARK;
                 [icon addSubview:marker];
                 [marker release];
             }
@@ -174,7 +176,7 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
         SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
 
         // Remove the "selected" marker
-        [[icon viewWithTag:1000] removeFromSuperview];
+        [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
         if ([list firstFreeSlotX:&x Y:&y]) {
             // Page has a free slot; move icon to this slot
