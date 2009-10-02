@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 01:36:32
+j* Last-modified: 2009-10-03 01:48:44
  */
 
 /**
@@ -89,12 +89,19 @@ static UIImage * uikitImageNamed(NSString *name)
 HOOK(SBIconController, setIsEditing$, void, BOOL isEditing)
 {
     if (isEditing) {
+        // Create array to track selected icons
+        selectedIcons = [[NSMutableArray alloc] init];
+
         // Load and cache the checkmark image
         checkMarkImage = [uikitImageNamed(@"UIRemoveControlMultiCheckedImage.png") retain];
     } else {
         // Checkmark image is not needed outside of editing mode, release
         [checkMarkImage release];
         checkMarkImage = nil;
+
+        // ... same goes for selected icons array
+        [selectedIcons release];
+        selectedIcons = nil;
     }
 
     CALL_ORIG(SBIconController, setIsEditing$, isEditing);
@@ -155,19 +162,6 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
 //______________________________________________________________________________
 //______________________________________________________________________________
 
-HOOK(SpringBoard, applicationDidFinishLaunching$, void, id application)
-{
-    selectedIcons = [[NSMutableArray alloc] initWithCapacity:4];
-
-    CALL_ORIG(SpringBoard, applicationDidFinishLaunching$, application);
-}
-
-HOOK(SpringBoard, dealloc, void)
-{
-    [selectedIcons release];
-    CALL_ORIG(SpringBoard, dealloc);
-}
-
 HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
 {
     SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
@@ -186,9 +180,6 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
         [iconCont removeIcon:icon animate:NO];
         [iconCont insertIcon:icon intoIconList:list X:0 Y:0 moveNow:YES duration:0];
     }
-
-    // Clear the list of selected icons
-    [selectedIcons removeAllObjects];
 
     CALL_ORIG(SpringBoard, menuButtonUp$, event);
 }
@@ -213,8 +204,6 @@ extern "C" void MultiIconMoverInitialize()
     LOAD_HOOK($SBIcon, @selector(touchesEnded:withEvent:), SBIcon$touchesEnded$withEvent$);
 
     Class $SpringBoard = objc_getClass("SpringBoard");
-    LOAD_HOOK($SpringBoard, @selector(applicationDidFinishLaunching:), SpringBoard$applicationDidFinishLaunching$);
-    LOAD_HOOK($SpringBoard, @selector(dealloc), SpringBoard$dealloc);
     LOAD_HOOK($SpringBoard, @selector(menuButtonUp:), SpringBoard$menuButtonUp$);
 
     [pool release];
