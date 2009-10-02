@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 01:02:47
+j* Last-modified: 2009-10-03 01:04:49
  */
 
 /**
@@ -192,14 +192,14 @@ extern "C" void MultiIconMoverInitialize()
     if (![identifier isEqualToString:@"com.apple.springboard"])
         return;
 
-    Class $SBIconController(objc_getClass("SBIconController"));
+    Class $SBIconController = objc_getClass("SBIconController");
     LOAD_HOOK($SBIconController, @selector(setIsEditing:), SBIconController$setIsEditing$);
 
-    Class $SBIcon(objc_getClass("SBIcon"));
+    Class $SBIcon = objc_getClass("SBIcon");
     LOAD_HOOK($SBIcon, @selector(touchesBegan:withEvent:), SBIcon$touchesBegan$withEvent$);
     LOAD_HOOK($SBIcon, @selector(touchesEnded:withEvent:), SBIcon$touchesEnded$withEvent$);
 
-    Class $SpringBoard(objc_getClass("SpringBoard"));
+    Class $SpringBoard = objc_getClass("SpringBoard");
     LOAD_HOOK($SpringBoard, @selector(applicationDidFinishLaunching:), SpringBoard$applicationDidFinishLaunching$);
     LOAD_HOOK($SpringBoard, @selector(dealloc), SpringBoard$dealloc);
     LOAD_HOOK($SpringBoard, @selector(menuButtonUp:), SpringBoard$menuButtonUp$);
