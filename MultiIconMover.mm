@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 01:04:49
+j* Last-modified: 2009-10-03 01:36:32
  */
 
 /**
@@ -59,16 +59,29 @@ static UIImage *checkMarkImage = nil;
 //______________________________________________________________________________
 //______________________________________________________________________________
 
+// NOTE: This code is taken from Jay Freeman (aka. saurik)'s UIImages
+//       application, which is bundled with WinterBoard.
+
+template <typename Type_>
+static void nlset(Type_ &function, struct nlist *nl, size_t index) {
+    struct nlist &name(nl[index]);
+    uintptr_t value(name.n_value);
+    if ((name.n_desc & N_ARM_THUMB_DEF) != 0)
+        value |= 0x00000001;
+    function = reinterpret_cast<Type_>(value);
+}
+
+// NOTE: This code is modified from Jay Freeman (aka. saurik)'s UIImages
+//       application, which is bundled with WinterBoard.
 static UIImage * uikitImageNamed(NSString *name)
 {
-    // NOTE: This code is modified from Jay Freeman (aka. saurik)'s
-    //       UIImages applications, which is bundled with WinterBoard
+    CGImageRef (*_LoadMappedImageRef)(CFStringRef) = NULL;
 
     struct nlist nl[2];
     memset(nl, 0, sizeof(nl));
     nl[0].n_un.n_name = (char *) "_LoadMappedImageRef";
     nlist("/System/Library/Frameworks/UIKit.framework/UIKit", nl);
-    CGImageRef (*_LoadMappedImageRef)(CFStringRef) = (CGImageRef (*)(CFStringRef)) nl[0].n_value;
+    nlset(_LoadMappedImageRef, nl, 0);
 
     return [UIImage imageWithCGImage:_LoadMappedImageRef(reinterpret_cast<CFStringRef>(name))];
 }
