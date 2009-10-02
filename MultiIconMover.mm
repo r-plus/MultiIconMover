@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 03:52:23
+j* Last-modified: 2009-10-03 03:32:08
  */
 
 /**
@@ -169,19 +169,24 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
     int x = 0, y = 0;
 
     SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
-    SBIconList *list = [iconCont currentIconList];
+    SBIconList *newList = [iconCont currentIconList];
 
     SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
     for (NSString *identifier in selectedIcons) {
         SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
+        SBIconList *oldList = [iconModel iconListContainingIcon:icon];
 
         // Remove the "selected" marker
         [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
-        if ([list firstFreeSlotX:&x Y:&y]) {
+        if (oldList == newList)
+            // The icon is already on this page, no need to move
+            continue;
+
+        if ([newList firstFreeSlotX:&x Y:&y]) {
             // Page has a free slot; move icon to this slot
-            [iconCont removeIcon:icon animate:NO];
-            [iconCont insertIcon:icon intoIconList:list X:x Y:y moveNow:YES duration:0];
+            [oldList removeIcon:icon compactEmptyLists:YES animate:NO];
+            [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
         }
     }
 
