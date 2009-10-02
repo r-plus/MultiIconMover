@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 00:57:26
+j* Last-modified: 2009-10-03 01:02:47
  */
 
 /**
@@ -193,22 +193,16 @@ extern "C" void MultiIconMoverInitialize()
         return;
 
     Class $SBIconController(objc_getClass("SBIconController"));
-    _SBIconController$setIsEditing$ =
-        MSHookMessage($SBIconController, @selector(setIsEditing:), &$SBIconController$setIsEditing$);
+    LOAD_HOOK($SBIconController, @selector(setIsEditing:), SBIconController$setIsEditing$);
 
     Class $SBIcon(objc_getClass("SBIcon"));
-    _SBIcon$touchesBegan$withEvent$ =
-        MSHookMessage($SBIcon, @selector(touchesBegan:withEvent:), &$SBIcon$touchesBegan$withEvent$);
-    _SBIcon$touchesEnded$withEvent$ =
-        MSHookMessage($SBIcon, @selector(touchesEnded:withEvent:), &$SBIcon$touchesEnded$withEvent$);
+    LOAD_HOOK($SBIcon, @selector(touchesBegan:withEvent:), SBIcon$touchesBegan$withEvent$);
+    LOAD_HOOK($SBIcon, @selector(touchesEnded:withEvent:), SBIcon$touchesEnded$withEvent$);
 
     Class $SpringBoard(objc_getClass("SpringBoard"));
-    _SpringBoard$applicationDidFinishLaunching$ =
-        MSHookMessage($SpringBoard, @selector(applicationDidFinishLaunching:), &$SpringBoard$applicationDidFinishLaunching$);
-    _SpringBoard$dealloc =
-        MSHookMessage($SpringBoard, @selector(dealloc), &$SpringBoard$dealloc);
-    _SpringBoard$menuButtonUp$ =
-        MSHookMessage($SpringBoard, @selector(menuButtonUp:), &$SpringBoard$menuButtonUp$);
+    LOAD_HOOK($SpringBoard, @selector(applicationDidFinishLaunching:), SpringBoard$applicationDidFinishLaunching$);
+    LOAD_HOOK($SpringBoard, @selector(dealloc), SpringBoard$dealloc);
+    LOAD_HOOK($SpringBoard, @selector(menuButtonUp:), SpringBoard$menuButtonUp$);
 
     [pool release];
 }
