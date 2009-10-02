@@ -2,7 +2,7 @@
  * Name: Common
  * Description: a common header for iPhone OS SpringBoard extensions (MobileSubstrate-based)
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2009-09-10 21:07:37
+ * Last-modified: 2009-10-03 04:17:22
  */
 
 /**
@@ -45,14 +45,20 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+#define CALL_ORIG(class, name, args...) \
+    _ ## class ## $ ## name(self, sel, ## args)
+
+#define GET_CLASS(class) \
+    Class $ ## class = objc_getClass(#class)
+
+#define GET_METACLASS(class) \
+    Class $ ## class = objc_getMetaClass(#class)
+
 #define HOOK(class, name, type, args...) \
     static type (*_ ## class ## $ ## name)(class *self, SEL sel, ## args); \
     static type $ ## class ## $ ## name(class *self, SEL sel, ## args)
 
 #define LOAD_HOOK(class, sel, imp) \
-    MSHookMessage(class, sel, MSHake(imp))
-
-#define CALL_ORIG(class, name, args...) \
-    _ ## class ## $ ## name(self, sel, ## args)
+    MSHookMessage($ ## class, @selector(sel), MSHake(class ## $ ## imp))
 
 /* vim: set syntax=objcpp sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
