@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 04:18:53
+j* Last-modified: 2009-10-03 13:45:46
  */
 
 /**
@@ -166,31 +166,39 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
 
 HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
 {
-    int x = 0, y = 0;
+    if ([selectedIcons count] != 0) {
+        int x = 0, y = 0;
 
-    SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
-    SBIconList *newList = [iconCont currentIconList];
+        SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
+        SBIconList *newList = [iconCont currentIconList];
 
-    SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
-    for (NSString *identifier in selectedIcons) {
-        SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
-        SBIconList *oldList = [iconModel iconListContainingIcon:icon];
+        SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+        for (NSString *identifier in selectedIcons) {
+            SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
+            SBIconList *oldList = [iconModel iconListContainingIcon:icon];
 
-        // Remove the "selected" marker
-        [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+            // Remove the "selected" marker
+            [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
-        if (oldList == newList)
-            // The icon is already on this page, no need to move
-            continue;
+            if (oldList == newList)
+                // The icon is already on this page, no need to move
+                continue;
 
-        if ([newList firstFreeSlotX:&x Y:&y]) {
-            // Page has a free slot; move icon to this slot
-            [oldList removeIcon:icon compactEmptyLists:YES animate:NO];
-            [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+            if ([newList firstFreeSlotX:&x Y:&y]) {
+                // Page has a free slot; move icon to this slot
+                [oldList removeIcon:icon compactEmptyLists:YES animate:NO];
+                [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+            }
         }
-    }
 
-    CALL_ORIG(SpringBoard, menuButtonUp$, event);
+        // Empty the selected icons array
+        [selectedIcons removeAllObjects];
+
+        // Reset the SpringBoard hold-button timer
+        [self clearMenuButtonTimer];
+    } else {
+        CALL_ORIG(SpringBoard, menuButtonUp$, event);
+    }
 }
 
 //______________________________________________________________________________
