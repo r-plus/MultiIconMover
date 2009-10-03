@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 17:09:35
+j* Last-modified: 2009-10-03 17:16:34
  */
 
 /**
@@ -187,6 +187,7 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
 
             // Page has a free slot; move icon to this slot
             [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
+            [oldList compactIconsInIconList:YES];
             [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
         }
 
