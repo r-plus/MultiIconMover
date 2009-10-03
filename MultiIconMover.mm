@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 13:45:46
+j* Last-modified: 2009-10-03 16:28:43
  */
 
 /**
@@ -114,10 +114,9 @@ HOOK(SBIconController, setIsEditing$, void, BOOL isEditing)
 
 HOOK(SBIcon, touchesBegan$withEvent$, void, NSSet *touches, UIEvent *event)
 {
-    unsigned int &_isJittering = MSHookIvar<unsigned int>(self, "_isJittering");
-    if (_isJittering == 0x3) {
+    if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
         // Record the touch timer to determine whether or not to select an icon
-        // FIXME: It might be more efficient to skip checking for _isJittering
+        // FIXME: It might be more efficient to skip checking for edit mode
         gettimeofday(&touchesBeganTime, NULL);
     }
 
@@ -126,10 +125,8 @@ HOOK(SBIcon, touchesBegan$withEvent$, void, NSSet *touches, UIEvent *event)
 
 HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
 {
-    // FIXME: Is there a simpler way to determine if icons are jittering?
-    unsigned int &_isJittering = MSHookIvar<unsigned int>(self, "_isJittering");
-    if (_isJittering == 0x7 || _isJittering == 0x4) {
-        // Is jittering
+    if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
+        // SpringBoard is in edit mode (icons are jittering)
         struct timeval nowTime, diffTime;
         gettimeofday(&nowTime, NULL);
         timersub(&nowTime, &touchesBeganTime, &diffTime); 
