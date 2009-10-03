@@ -29,7 +29,7 @@ SUBDIRS    = .
 DIRLIST    := $(SUBDIRS:%=%)
 SRCS       := $(foreach dir,$(DIRLIST), $(wildcard $(dir)/*.mm))
 HDRS       := $(foreach dir,$(DIRLIST), $(wildcard $(dir)/*.h))
-OBJS  := $(SRCS:.mm=.o)
+OBJS       := $(SRCS:.mm=.o)
 
 all: $(NAME).dylib
 
@@ -43,7 +43,7 @@ install: $(NAME).dylib
 	ssh root@iphone restart
 
 $(NAME).dylib: config $(OBJS) $(HDRS)
-	$(LD) -dynamiclib $(LDFLAGS) $(OBJS) -init _$(NAME)Initialize -o $@
+	$(LD) -dynamiclib $(LDFLAGS) $(OBJS) -o $@
 	$(LDID) -S $@
 
 %.o: %.mm
@@ -52,4 +52,4 @@ $(NAME).dylib: config $(OBJS) $(HDRS)
 clean:
 	rm -f $(OBJS) $(NAME).dylib
 
-.PHONY: all clean
+.PHONY: all clean config install

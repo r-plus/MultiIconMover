@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 17:19:16
+j* Last-modified: 2009-10-03 17:27:08
  */
 
 /**
@@ -202,7 +202,8 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
 //______________________________________________________________________________
 //______________________________________________________________________________
 
-extern "C" void MultiIconMoverInitialize()
+
+__attribute__((constructor)) static void init()
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
