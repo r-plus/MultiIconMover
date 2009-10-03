@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 16:28:43
+j* Last-modified: 2009-10-03 16:41:13
  */
 
 /**
@@ -43,8 +43,6 @@ j* Last-modified: 2009-10-03 16:28:43
  */
 
 
-#include <sys/time.h>
-
 #import <SpringBoard/SBIcon.h>
 #import <SpringBoard/SBIconController.h>
 #import <SpringBoard/SBIconList.h>
@@ -54,7 +52,7 @@ j* Last-modified: 2009-10-03 16:28:43
 #define TAG_CHECKMARK 2000
 
 
-static struct timeval touchesBeganTime = {0, 0};
+static NSTimeInterval touchesBeganTime = 0;
 static NSMutableArray *selectedIcons = nil;
 static UIImage *checkMarkImage = nil;
 
@@ -114,24 +112,26 @@ HOOK(SBIconController, setIsEditing$, void, BOOL isEditing)
 
 HOOK(SBIcon, touchesBegan$withEvent$, void, NSSet *touches, UIEvent *event)
 {
-    if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
-        // Record the touch timer to determine whether or not to select an icon
+    if ([[objc_getClass("SBIconController") sharedInstance] isEditing])
+        // Record the touch start time to determine whether or not to select an icon
         // FIXME: It might be more efficient to skip checking for edit mode
-        gettimeofday(&touchesBeganTime, NULL);
-    }
+        touchesBeganTime = [[touches anyObject] timestamp];
 
     CALL_ORIG(SBIcon, touchesBegan$withEvent$, touches, event);
+}
+
+HOOK(SBIcon, touchesMoved$withEvent$, void, NSSet *touches, UIEvent *event)
+{
+    // Touch moved, not a tap; reset the touch time-tracking variable
+    touchesBeganTime = 0;
+    CALL_ORIG(SBIcon, touchesMoved$withEvent$, touches, event);
 }
 
 HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
 {
     if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
         // SpringBoard is in edit mode (icons are jittering)
-        struct timeval nowTime, diffTime;
-        gettimeofday(&nowTime, NULL);
-        timersub(&nowTime, &touchesBeganTime, &diffTime); 
-        // NOTE: If tap time is less than 0.3 seconds, mark as selected
-        if (diffTime.tv_sec == 0 && diffTime.tv_usec < 300000) {
+        if ([[touches anyObject] timestamp] - touchesBeganTime < 0.3) {
             NSString *identifier = [self displayIdentifier];
             SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
             SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
@@ -215,6 +215,7 @@ extern "C" void MultiIconMoverInitialize()
 
     GET_CLASS(SBIcon);
     LOAD_HOOK(SBIcon, touchesBegan:withEvent:, touchesBegan$withEvent$);
+    LOAD_HOOK(SBIcon, touchesMoved:withEvent:, touchesMoved$withEvent$);
     LOAD_HOOK(SBIcon, touchesEnded:withEvent:, touchesEnded$withEvent$);
 
     GET_CLASS(SpringBoard);
