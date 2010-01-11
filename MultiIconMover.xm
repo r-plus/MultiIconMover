@@ -6,11 +6,11 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2009-10-03 17:27:08
+j* Last-modified: 2010-01-11 23:52:48
  */
 
 /**
- * Copyright (C) 2008  Lance Fetters (aka. ashikase)
+ * Copyright (C) 2009-2010  Lance Fetters (aka. ashikase)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@ j* Last-modified: 2009-10-03 17:27:08
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <substrate.h>
 
 #import <SpringBoard/SBIcon.h>
 #import <SpringBoard/SBIconController.h>
@@ -56,8 +57,7 @@ static NSTimeInterval touchesBeganTime = 0;
 static NSMutableArray *selectedIcons = nil;
 static UIImage *checkMarkImage = nil;
 
-//______________________________________________________________________________
-//______________________________________________________________________________
+//==============================================================================
 
 // NOTE: This code is taken from Jay Freeman (aka. saurik)'s UIImages
 //       application, which is bundled with WinterBoard.
@@ -86,7 +86,9 @@ static UIImage * uikitImageNamed(NSString *name)
     return [UIImage imageWithCGImage:_LoadMappedImageRef(reinterpret_cast<CFStringRef>(name))];
 }
 
-HOOK(SBIconController, setIsEditing$, void, BOOL isEditing)
+%hook SBIconController
+
+- (void)setIsEditing:(BOOL)isEditing
 {
     if (isEditing) {
         // Create array to track selected icons
@@ -104,30 +106,33 @@ HOOK(SBIconController, setIsEditing$, void, BOOL isEditing)
         selectedIcons = nil;
     }
 
-    CALL_ORIG(SBIconController, setIsEditing$, isEditing);
+    %orig;
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
+%end
 
-HOOK(SBIcon, touchesBegan$withEvent$, void, NSSet *touches, UIEvent *event)
+//==============================================================================
+
+%hook SBIcon
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
     if ([[objc_getClass("SBIconController") sharedInstance] isEditing])
         // Record the touch start time to determine whether or not to select an icon
         // FIXME: It might be more efficient to skip checking for edit mode
         touchesBeganTime = [[touches anyObject] timestamp];
 
-    CALL_ORIG(SBIcon, touchesBegan$withEvent$, touches, event);
+    %orig;
 }
 
-HOOK(SBIcon, touchesMoved$withEvent$, void, NSSet *touches, UIEvent *event)
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
 {
     // Touch moved, not a tap; reset the touch time-tracking variable
     touchesBeganTime = 0;
-    CALL_ORIG(SBIcon, touchesMoved$withEvent$, touches, event);
+    %orig;
 }
 
-HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
     if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
         // SpringBoard is in edit mode (icons are jittering)
@@ -155,13 +160,16 @@ HOOK(SBIcon, touchesEnded$withEvent$, void, NSSet *touches, UIEvent *event)
         }
     }
 
-    CALL_ORIG(SBIcon, touchesEnded$withEvent$, touches, event);
+    %orig;
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
+%end
 
-HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
+//==============================================================================
+
+%hook SpringBoard
+
+- (void)menuButtonUp:(GSEventRef)event
 {
     if ([selectedIcons count] != 0) {
         int x = 0, y = 0;
@@ -195,35 +203,14 @@ HOOK(SpringBoard, menuButtonUp$, void, struct __GSEvent *event)
         // Reset the SpringBoard hold-button timer
         [self clearMenuButtonTimer];
     } else {
-        CALL_ORIG(SpringBoard, menuButtonUp$, event);
+        %orig;
     }
 }
 
-//______________________________________________________________________________
-//______________________________________________________________________________
+%end
 
+//==============================================================================
 
-__attribute__((constructor)) static void init()
-{
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-    // NOTE: This library should only be loaded for SpringBoard
-    NSString *identifier = [[NSBundle mainBundle] bundleIdentifier];
-    if (![identifier isEqualToString:@"com.apple.springboard"])
-        return;
-
-    GET_CLASS(SBIconController);
-    LOAD_HOOK(SBIconController, setIsEditing:, setIsEditing$);
-
-    GET_CLASS(SBIcon);
-    LOAD_HOOK(SBIcon, touchesBegan:withEvent:, touchesBegan$withEvent$);
-    LOAD_HOOK(SBIcon, touchesMoved:withEvent:, touchesMoved$withEvent$);
-    LOAD_HOOK(SBIcon, touchesEnded:withEvent:, touchesEnded$withEvent$);
-
-    GET_CLASS(SpringBoard);
-    LOAD_HOOK(SpringBoard, menuButtonUp:, menuButtonUp$);
-
-    [pool release];
-}
+%constructor
 
 /* vim: set syntax=objcpp sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
