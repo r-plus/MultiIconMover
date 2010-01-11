@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-01-11 23:52:48
+j* Last-modified: 2010-01-12 00:43:51
  */
 
 /**
@@ -138,14 +138,12 @@ static UIImage * uikitImageNamed(NSString *name)
         // SpringBoard is in edit mode (icons are jittering)
         if ([[touches anyObject] timestamp] - touchesBeganTime < 0.3) {
             NSString *identifier = [self displayIdentifier];
-            SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
-            SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
             if ([selectedIcons containsObject:identifier]) {
                 // Remove icon from list of selected icons
                 [selectedIcons removeObject:identifier];
 
                 // Remove the "selected" marker
-                [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+                [[self viewWithTag:TAG_CHECKMARK] removeFromSuperview];
             } else {
                 // Add icon to list of selected icons
                 [selectedIcons addObject:identifier];
@@ -154,7 +152,7 @@ static UIImage * uikitImageNamed(NSString *name)
                 UIImageView *marker = [[UIImageView alloc] initWithImage:checkMarkImage];
                 marker.frame = CGRectMake(40.0f, 39.0f, checkMarkImage.size.width, checkMarkImage.size.height);
                 marker.tag = TAG_CHECKMARK;
-                [icon addSubview:marker];
+                [self addSubview:marker];
                 [marker release];
             }
         }
