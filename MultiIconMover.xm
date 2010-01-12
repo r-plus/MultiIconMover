@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-01-12 00:43:51
+j* Last-modified: 2010-01-13 01:11:45
  */
 
 /**
@@ -178,11 +178,14 @@ static UIImage * uikitImageNamed(NSString *name)
         SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
         for (NSString *identifier in selectedIcons) {
             SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
-            SBIconList *oldList = [iconModel iconListContainingIcon:icon];
+            if (icon == nil)
+                // Application has been removed
+                continue;
 
             // Remove the "selected" marker
             [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
+            SBIconList *oldList = [iconModel iconListContainingIcon:icon];
             if (oldList == newList)
                 // The icon is already on this page, no need to move
                 continue;
