@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-01-13 01:11:45
+j* Last-modified: 2010-04-15 01:31:55
  */
 
 /**
@@ -50,6 +50,10 @@ j* Last-modified: 2010-01-13 01:11:45
 #import <SpringBoard/SBIconModel.h>
 #import <SpringBoard/SpringBoard.h>
 
+@interface UIImage (UIImagePrivate)
++ (id)kitImageNamed:(id)named;
+@end
+
 #define TAG_CHECKMARK 2000
 
 
@@ -58,33 +62,6 @@ static NSMutableArray *selectedIcons = nil;
 static UIImage *checkMarkImage = nil;
 
 //==============================================================================
-
-// NOTE: This code is taken from Jay Freeman (aka. saurik)'s UIImages
-//       application, which is bundled with WinterBoard.
-
-template <typename Type_>
-static void nlset(Type_ &function, struct nlist *nl, size_t index) {
-    struct nlist &name(nl[index]);
-    uintptr_t value(name.n_value);
-    if ((name.n_desc & N_ARM_THUMB_DEF) != 0)
-        value |= 0x00000001;
-    function = reinterpret_cast<Type_>(value);
-}
-
-// NOTE: This code is modified from Jay Freeman (aka. saurik)'s UIImages
-//       application, which is bundled with WinterBoard.
-static UIImage * uikitImageNamed(NSString *name)
-{
-    CGImageRef (*_LoadMappedImageRef)(CFStringRef) = NULL;
-
-    struct nlist nl[2];
-    memset(nl, 0, sizeof(nl));
-    nl[0].n_un.n_name = (char *) "_LoadMappedImageRef";
-    nlist("/System/Library/Frameworks/UIKit.framework/UIKit", nl);
-    nlset(_LoadMappedImageRef, nl, 0);
-
-    return [UIImage imageWithCGImage:_LoadMappedImageRef(reinterpret_cast<CFStringRef>(name))];
-}
 
 %hook SBIconController
 
@@ -95,7 +72,7 @@ static UIImage * uikitImageNamed(NSString *name)
         selectedIcons = [[NSMutableArray alloc] init];
 
         // Load and cache the checkmark image
-        checkMarkImage = [uikitImageNamed(@"UIRemoveControlMultiCheckedImage.png") retain];
+        checkMarkImage = [[UIImage kitImageNamed:@"UIRemoveControlMultiCheckedImage.png"] retain];
     } else {
         // Checkmark image is not needed outside of editing mode, release
         [checkMarkImage release];
