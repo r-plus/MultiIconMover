@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-04-15 01:31:55
+j* Last-modified: 2010-05-04 16:35:06
  */
 
 /**
@@ -54,12 +54,19 @@ j* Last-modified: 2010-04-15 01:31:55
 + (id)kitImageNamed:(id)named;
 @end
 
+@interface SBIconList (Firmware32)
+- (BOOL)firstFreeSlotIndex:(int *)index;
+- (id)placeIcon:(id)icon atIndex:(int)index animate:(BOOL)animate moveNow:(BOOL)now;
+@end
+
 #define TAG_CHECKMARK 2000
 
 
 static NSTimeInterval touchesBeganTime = 0;
 static NSMutableArray *selectedIcons = nil;
 static UIImage *checkMarkImage = nil;
+
+static BOOL isFirmwarePre32_ = NO;
 
 //==============================================================================
 
@@ -148,6 +155,7 @@ static UIImage *checkMarkImage = nil;
 {
     if ([selectedIcons count] != 0) {
         int x = 0, y = 0;
+        int index = 0;
 
         SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
         SBIconList *newList = [iconCont currentIconList];
@@ -167,11 +175,20 @@ static UIImage *checkMarkImage = nil;
                 // The icon is already on this page, no need to move
                 continue;
 
-            if ([newList firstFreeSlotX:&x Y:&y]) {
-                // Page has a free slot; move icon to this slot
-                [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
-                [oldList compactIconsInIconList:YES];
-                [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+            if (isFirmwarePre32_) {
+                if ([newList firstFreeSlotX:&x Y:&y]) {
+                    // Page has a free slot; move icon to this slot
+                    [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
+                    [oldList compactIconsInIconList:YES];
+                    [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+                }
+            } else {
+                if ([newList firstFreeSlotIndex:&index]) {
+                    // Page has a free slot; move icon to this slot
+                    [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
+                    [oldList compactIconsInIconList:YES];
+                    [newList placeIcon:icon atIndex:index animate:YES moveNow:YES];
+                }
             }
         }
 
@@ -189,6 +206,17 @@ static UIImage *checkMarkImage = nil;
 
 //==============================================================================
 
-%constructor
+__attribute__((constructor)) static void init()
+{
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+
+    // Determine firmware version
+    Class $SBIconList = objc_getClass("SBIconList");
+    isFirmwarePre32_ = (class_getInstanceMethod($SBIconList, @selector(firstFreeSlotX:Y:)) != NULL);
+
+    %init;
+
+    [pool release];
+}
 
 /* vim: set syntax=objcpp sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
