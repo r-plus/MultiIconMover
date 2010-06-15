@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-06-15 19:32:30
+j* Last-modified: 2010-06-15 23:35:33
  */
 
 /**
@@ -74,6 +74,8 @@ static NSTimeInterval touchesBeganTime = 0;
 static NSMutableArray *selectedIcons = nil;
 static UIImage *checkMarkImage = nil;
 
+static BOOL menuButtonIsDown = NO;
+
 static BOOL isFirmwarePre32_ = NO;
 
 //==============================================================================
@@ -109,7 +111,7 @@ static BOOL isFirmwarePre32_ = NO;
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    if ([[objc_getClass("SBIconController") sharedInstance] isEditing])
+    if ([[objc_getClass("SBIconController") sharedInstance] isEditing] && !menuButtonIsDown)
         // Record the touch start time to determine whether or not to select an icon
         // FIXME: It might be more efficient to skip checking for edit mode
         touchesBeganTime = [[touches anyObject] timestamp];
@@ -163,6 +165,11 @@ static BOOL isFirmwarePre32_ = NO;
                 [marker release];
             }
         }
+
+        // Reset the touch time-tracking variable
+        // NOTE: This is needed as time may not be reset later (if icon is
+        //       touched while menu button is down).
+        touchesBeganTime = 0;
     }
 }
 
@@ -171,6 +178,15 @@ static BOOL isFirmwarePre32_ = NO;
 //==============================================================================
 
 %hook SpringBoard
+
+- (void)menuButtonDown:(GSEventRef)event
+{
+    if ([selectedIcons count] != 0)
+        // NOTE: This is used to prevent selection of icons while menu button is down
+        menuButtonIsDown = YES;
+    else
+        %orig;
+}
 
 - (void)menuButtonUp:(GSEventRef)event
 {
@@ -216,8 +232,8 @@ static BOOL isFirmwarePre32_ = NO;
         // Empty the selected icons array
         [selectedIcons removeAllObjects];
 
-        // Reset the SpringBoard hold-button timer
-        [self clearMenuButtonTimer];
+        // Reset the local menu button state variable
+        menuButtonIsDown = NO;
     } else {
         %orig;
     }
