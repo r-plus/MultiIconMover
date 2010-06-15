@@ -1,6 +1,6 @@
 Package: jp.ashikase.multiiconmover
 Name: MultiIconMover
-Version: svn.r112
+Version: svn.r117
 Architecture: iphoneos-arm
 Description: Move multiple SpringBoard icons at a time.
 Homepage: http://iphone-tweaks.googlecode.com/
@@ -8,6 +8,6 @@ Depiction: http://moreinfo.thebigboss.org/moreinfo/depiction.php?file=multiiconm
 Maintainer: BigBoss <bigboss@thebigboss.org>
 Author: Lance Fetters (ashikase) <gaizin@gmail.com>
 Section: System
-Depends: mobilesubstrate, firmware (>=3.0)
+Depends: mobilesubstrate, firmware (>=3.0),  firmware (<<4.0)
 dev: ashikase
 Sponsor: thebigboss.org <http://thebigboss.org>
