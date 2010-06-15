@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-05-04 16:35:06
+j* Last-modified: 2010-06-15 19:32:30
  */
 
 /**
@@ -50,8 +50,16 @@ j* Last-modified: 2010-05-04 16:35:06
 #import <SpringBoard/SBIconModel.h>
 #import <SpringBoard/SpringBoard.h>
 
+@interface UIView (Geometry)
+@property(assign) CGPoint origin;
+@end
+
 @interface UIImage (UIImagePrivate)
 + (id)kitImageNamed:(id)named;
+@end
+
+@interface SBIcon (Firmware32)
++ (CGSize)defaultIconImageSize;
 @end
 
 @interface SBIconList (Firmware32)
@@ -118,6 +126,8 @@ static BOOL isFirmwarePre32_ = NO;
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
+    %orig;
+
     if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
         // SpringBoard is in edit mode (icons are jittering)
         if ([[touches anyObject] timestamp] - touchesBeganTime < 0.3) {
@@ -132,17 +142,28 @@ static BOOL isFirmwarePre32_ = NO;
                 // Add icon to list of selected icons
                 [selectedIcons addObject:identifier];
 
+                // Determine origin for "selected" marker based on icon image size
+                // NOTE: Default icon image sizes: iPhone/iPod: 59x62, iPad: 74x76 
+                CGPoint point;
+                Class $SBIcon = objc_getClass("SBIcon");
+                if ([$SBIcon respondsToSelector:@selector(defaultIconImageSize)]) {
+                    // Determine position for marker (relative to lower right corner of icon)
+                    CGSize size = [$SBIcon defaultIconImageSize];
+                    point = CGPointMake((size.width - checkMarkImage.size.width) + 10.0f, size.height - 23.0f);
+                } else {
+                    // Fall back to hard-coded values (for firmware < 3.2, iPhone/iPod only)
+                    point = CGPointMake(40.0f, 39.0f);
+                }
+
                 // Add a "selected" marker
                 UIImageView *marker = [[UIImageView alloc] initWithImage:checkMarkImage];
-                marker.frame = CGRectMake(40.0f, 39.0f, checkMarkImage.size.width, checkMarkImage.size.height);
                 marker.tag = TAG_CHECKMARK;
+                marker.origin = point;
                 [self addSubview:marker];
                 [marker release];
             }
         }
     }
-
-    %orig;
 }
 
 %end
