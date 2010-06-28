@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-06-15 23:35:33
+j* Last-modified: 2010-06-29 01:01:12
  */
 
 /**
@@ -80,6 +80,22 @@ static BOOL isFirmwarePre32_ = NO;
 
 //==============================================================================
 
+static void deselectIcons()
+{
+    // Unmark all selected icons
+    SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+    for (NSString *identifier in selectedIcons) {
+        // Remove the "selected" marker
+        SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
+        [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+    }
+
+    // Empty the selected icons array
+    [selectedIcons removeAllObjects];
+}
+
+//==============================================================================
+
 %hook SBIconController
 
 - (void)setIsEditing:(BOOL)isEditing
@@ -91,6 +107,9 @@ static BOOL isFirmwarePre32_ = NO;
         // Load and cache the checkmark image
         checkMarkImage = [[UIImage kitImageNamed:@"UIRemoveControlMultiCheckedImage.png"] retain];
     } else {
+        // Deselect any remaining selected icons
+        deselectIcons();
+
         // Checkmark image is not needed outside of editing mode, release
         [checkMarkImage release];
         checkMarkImage = nil;
