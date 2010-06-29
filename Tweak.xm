@@ -1,12 +1,12 @@
 /**
  * Name: MultiIconMover
- * Type: iPhone OS 3.x SpringBoard extension (MobileSubstrate-based)
+ * Type: iPhone OS 3.x/4.x SpringBoard extension (MobileSubstrate-based)
  * Description: Allows for moving multiple SpringBoard icons at a time.
  * Usage: In edit (jitter) mode, tap the icons to move, switch to target page,
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-06-29 01:01:12
+j* Last-modified: 2010-06-29 23:08:11
  */
 
 /**
@@ -67,6 +67,37 @@ j* Last-modified: 2010-06-29 01:01:12
 - (id)placeIcon:(id)icon atIndex:(int)index animate:(BOOL)animate moveNow:(BOOL)now;
 @end
 
+@interface SBIcon (Firmware4)
+- (BOOL)isFolderIcon;
+- (id)leafIdentifier;
+@end
+
+@interface SBIconController (Firmware4)
+- (id)currentRootIconList;
+- (id)openFolder;
+@end
+
+@interface SBIconModel (Firmware4)
+- (id)rootFolder;
+- (id)leafIconForIdentifier:(NSString *)identifier;
+@end
+
+@interface SBIconListModel : NSObject
+- (void)removeIcon:(id)icon;
+- (void)compactIcons;
+@end
+
+@interface SBIconListView : UIView
+- (id)model;
+- (BOOL)isFull;
+- (unsigned)firstFreeSlotIndex;
+- (id)placeIcon:(id)icon atIndex:(unsigned)index moveNow:(BOOL)now pop:(BOOL)pop;
+@end
+
+@interface SBFolder : NSObject
+- (id)listContainingIcon:(id)icon;
+@end
+
 #define TAG_CHECKMARK 2000
 
 
@@ -76,7 +107,8 @@ static UIImage *checkMarkImage = nil;
 
 static BOOL menuButtonIsDown = NO;
 
-static BOOL isFirmwarePre32_ = NO;
+static BOOL isFirmware3x_ = NO;
+static BOOL isFirmware32_ = NO;
 
 //==============================================================================
 
@@ -86,7 +118,9 @@ static void deselectIcons()
     SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
     for (NSString *identifier in selectedIcons) {
         // Remove the "selected" marker
-        SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
+        SBIcon *icon = isFirmware3x_ ?
+            [iconModel iconForDisplayIdentifier:identifier] :
+            [iconModel leafIconForIdentifier:identifier];
         [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
     }
 
@@ -130,10 +164,12 @@ static void deselectIcons()
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    if ([[objc_getClass("SBIconController") sharedInstance] isEditing] && !menuButtonIsDown)
-        // Record the touch start time to determine whether or not to select an icon
-        // FIXME: It might be more efficient to skip checking for edit mode
-        touchesBeganTime = [[touches anyObject] timestamp];
+    SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
+    if ([iconCont isEditing] && !menuButtonIsDown)
+        if (isFirmware3x_ || (![self isFolderIcon] && [iconCont openFolder] == nil))
+            // Record the touch start time to determine whether or not to select an icon
+            // FIXME: It might be more efficient to skip checking for edit mode
+            touchesBeganTime = [[touches anyObject] timestamp];
 
     %orig;
 }
@@ -152,7 +188,7 @@ static void deselectIcons()
     if ([[objc_getClass("SBIconController") sharedInstance] isEditing]) {
         // SpringBoard is in edit mode (icons are jittering)
         if ([[touches anyObject] timestamp] - touchesBeganTime < 0.3) {
-            NSString *identifier = [self displayIdentifier];
+            NSString *identifier = isFirmware3x_ ? [self displayIdentifier] : [self leafIdentifier];
             if ([selectedIcons containsObject:identifier]) {
                 // Remove icon from list of selected icons
                 [selectedIcons removeObject:identifier];
@@ -209,47 +245,90 @@ static void deselectIcons()
 
 - (void)menuButtonUp:(GSEventRef)event
 {
+    SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
     if ([selectedIcons count] != 0) {
-        int x = 0, y = 0;
-        int index = 0;
+        if (isFirmware3x_ || [iconCont openFolder] == nil) {
+            SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+            if (isFirmware3x_) {
+                // Get target list
+                SBIconList *newList = [iconCont currentIconList];
 
-        SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
-        SBIconList *newList = [iconCont currentIconList];
+                // Move each icon
+                for (NSString *identifier in selectedIcons) {
+                    SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
+                    if (icon == nil)
+                        // Application has been removed
+                        continue;
 
-        SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
-        for (NSString *identifier in selectedIcons) {
-            SBIcon *icon = [iconModel iconForDisplayIdentifier:identifier];
-            if (icon == nil)
-                // Application has been removed
-                continue;
+                    // Remove the "selected" marker
+                    [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
-            // Remove the "selected" marker
-            [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+                    SBIconList *oldList = [iconModel iconListContainingIcon:icon];
+                    if (oldList == newList)
+                        // The icon is already on this page, no need to move
+                        continue;
 
-            SBIconList *oldList = [iconModel iconListContainingIcon:icon];
-            if (oldList == newList)
-                // The icon is already on this page, no need to move
-                continue;
-
-            if (isFirmwarePre32_) {
-                if ([newList firstFreeSlotX:&x Y:&y]) {
-                    // Page has a free slot; move icon to this slot
-                    [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
-                    [oldList compactIconsInIconList:YES];
-                    [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+                    if (isFirmware32_) {
+                        // Firmware 3.2
+                        int index = 0;
+                        if ([newList firstFreeSlotIndex:&index]) {
+                            // Page has a free slot; move icon to this slot
+                            [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
+                            [oldList compactIconsInIconList:YES];
+                            [newList placeIcon:icon atIndex:index animate:YES moveNow:YES];
+                        }
+                    } else {
+                        // Firmware < 3.2
+                        int x = 0, y = 0;
+                        if ([newList firstFreeSlotX:&x Y:&y]) {
+                            // Page has a free slot; move icon to this slot
+                            [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
+                            [oldList compactIconsInIconList:YES];
+                            [newList placeIcon:icon atX:x Y:y animate:YES moveNow:YES];
+                        }
+                    }
                 }
             } else {
-                if ([newList firstFreeSlotIndex:&index]) {
-                    // Page has a free slot; move icon to this slot
-                    [oldList removeIcon:icon compactEmptyLists:NO animate:NO];
-                    [oldList compactIconsInIconList:YES];
-                    [newList placeIcon:icon atIndex:index animate:YES moveNow:YES];
-                }
-            }
-        }
+                // Get target list
+                SBIconListView *newListView = [iconCont currentRootIconList];
+                SBIconListModel *newListModel = [newListView model];
 
-        // Empty the selected icons array
-        [selectedIcons removeAllObjects];
+                // Move each icon
+                for (NSString *identifier in selectedIcons) {
+                    SBIcon *icon = [iconModel leafIconForIdentifier:identifier];
+                    if (icon == nil)
+                        // Application has been removed
+                        continue;
+
+                    // Remove the "selected" marker
+                    [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+
+                    SBIconListModel *oldListModel = [[iconModel rootFolder] listContainingIcon:icon];
+                    if (oldListModel == newListModel)
+                        // The icon is already on this page, no need to move
+                        continue;
+
+                    if (![newListView isFull]) {
+                        // Page has a free slot; move icon to this slot
+                        [oldListModel removeIcon:icon];
+                        [oldListModel compactIcons];
+
+                        unsigned int index = [newListView firstFreeSlotIndex];
+                        [newListView placeIcon:icon atIndex:index moveNow:YES pop:YES];
+                    }
+                }
+
+                // Relayout icon pages
+                [iconCont animateToNewState:0 domino:NO];
+            }
+
+            // Empty the selected icons array
+            [selectedIcons removeAllObjects];
+        } else {
+            // Folder is open; deselect all icons and call original functionality
+            deselectIcons();
+            %orig;
+        }
 
         // Reset the local menu button state variable
         menuButtonIsDown = NO;
@@ -268,7 +347,9 @@ __attribute__((constructor)) static void init()
 
     // Determine firmware version
     Class $SBIconList = objc_getClass("SBIconList");
-    isFirmwarePre32_ = (class_getInstanceMethod($SBIconList, @selector(firstFreeSlotX:Y:)) != NULL);
+    isFirmware3x_ = ($SBIconList != nil);
+    if (isFirmware3x_)
+        isFirmware32_ = (class_getInstanceMethod($SBIconList, @selector(firstFreeSlotX:Y:)) == NULL);
 
     %init;
 
