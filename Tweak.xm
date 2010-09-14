@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-06-29 23:08:11
+j* Last-modified: 2010-09-15 02:22:12
  */
 
 /**
@@ -155,6 +155,39 @@ static void deselectIcons()
 
     %orig;
 }
+
+%group GFirmware4x_SBIconController
+
+static inline void removeSelectedIcon(SBIcon *icon)
+{
+    NSString *identifier = [icon leafIdentifier];
+    if ([selectedIcons containsObject:identifier]) {
+        // Remove icon from list of selected icons
+        [selectedIcons removeObject:identifier];
+
+        // Remove the "selected" marker
+        [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+    }
+}
+
+- (void)animateIcons:(id)icons intoFolderIcon:(id)folderIcon openFolderOnFinish:(BOOL)finish
+{
+    %orig;
+
+    // Icon(s) are being added to a folder; make sure icon is not in selected array
+    for (SBIcon *icon in icons)
+        removeSelectedIcon(icon);
+}
+
+- (void)_dropIconInDestinationHole:(id)icon
+{
+    %orig;
+
+    if ([self openFolder] != nil)
+        removeSelectedIcon(icon);
+}
+
+%end
 
 %end
 
@@ -350,6 +383,8 @@ __attribute__((constructor)) static void init()
     isFirmware3x_ = ($SBIconList != nil);
     if (isFirmware3x_)
         isFirmware32_ = (class_getInstanceMethod($SBIconList, @selector(firstFreeSlotX:Y:)) == NULL);
+    else
+        %init(GFirmware4x_SBIconController);
 
     %init;
 
