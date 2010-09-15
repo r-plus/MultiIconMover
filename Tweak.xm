@@ -6,7 +6,7 @@
           and press Home button. The icons will be place to the top of the
           page.
  * Author: Lance Fetters (aka. ashikase)
-j* Last-modified: 2010-09-15 02:22:12
+j* Last-modified: 2010-09-15 23:03:41
  */
 
 /**
@@ -61,20 +61,23 @@ j* Last-modified: 2010-09-15 02:22:12
 @interface SBIcon (Firmware32)
 + (CGSize)defaultIconImageSize;
 @end
+@interface SBIcon (Firmware4)
+- (BOOL)isFolderIcon;
+- (id)leafIdentifier;
+@end
 
 @interface SBIconList (Firmware32)
 - (BOOL)firstFreeSlotIndex:(int *)index;
 - (id)placeIcon:(id)icon atIndex:(int)index animate:(BOOL)animate moveNow:(BOOL)now;
 @end
 
-@interface SBIcon (Firmware4)
-- (BOOL)isFolderIcon;
-- (id)leafIdentifier;
-@end
-
 @interface SBIconController (Firmware4)
 - (id)currentRootIconList;
 - (id)openFolder;
+@end
+@interface SBIconController (FolderEnhancer)
+- (BOOL)folderEnhancerMoveIconsToCurrentIconList:(NSArray *)icons;
+- (BOOL)folderEnhancerDropIcons:(NSArray *)icons;
 @end
 
 @interface SBIconModel (Firmware4)
@@ -109,6 +112,7 @@ static BOOL menuButtonIsDown = NO;
 
 static BOOL isFirmware3x_ = NO;
 static BOOL isFirmware32_ = NO;
+static BOOL hasFolderEnhancer_ = NO;
 
 //==============================================================================
 
@@ -156,7 +160,7 @@ static void deselectIcons()
     %orig;
 }
 
-%group GFirmware4x_SBIconController
+%group GFirmware4x_Normal
 
 static inline void removeSelectedIcon(SBIcon *icon)
 {
@@ -174,7 +178,7 @@ static inline void removeSelectedIcon(SBIcon *icon)
 {
     %orig;
 
-    // Icon(s) are being added to a folder; make sure icon is not in selected array
+    // Icon(s) was added to a folder; make sure icon is not in selected array
     for (SBIcon *icon in icons)
         removeSelectedIcon(icon);
 }
@@ -184,10 +188,14 @@ static inline void removeSelectedIcon(SBIcon *icon)
     %orig;
 
     if ([self openFolder] != nil)
+        // Icon was added to a folder; make sure icon is not in selected array
         removeSelectedIcon(icon);
 }
 
-%end
+%end // GFirmware4x_FolderEnhancer
+
+%group GFirmware4x_FolderEnhancer
+%end // GFirmware4x_FolderEnhancer
 
 %end
 
@@ -199,7 +207,7 @@ static inline void removeSelectedIcon(SBIcon *icon)
 {
     SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
     if ([iconCont isEditing] && !menuButtonIsDown)
-        if (isFirmware3x_ || (![self isFolderIcon] && [iconCont openFolder] == nil))
+        if (isFirmware3x_ || (![self isFolderIcon] && (hasFolderEnhancer_ || [iconCont openFolder] == nil)))
             // Record the touch start time to determine whether or not to select an icon
             // FIXME: It might be more efficient to skip checking for edit mode
             touchesBeganTime = [[touches anyObject] timestamp];
@@ -280,7 +288,7 @@ static inline void removeSelectedIcon(SBIcon *icon)
 {
     SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
     if ([selectedIcons count] != 0) {
-        if (isFirmware3x_ || [iconCont openFolder] == nil) {
+        if (isFirmware3x_ || hasFolderEnhancer_ || [iconCont openFolder] == nil) {
             SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
             if (isFirmware3x_) {
                 // Get target list
@@ -322,32 +330,43 @@ static inline void removeSelectedIcon(SBIcon *icon)
                     }
                 }
             } else {
-                // Get target list
-                SBIconListView *newListView = [iconCont currentRootIconList];
-                SBIconListModel *newListModel = [newListView model];
-
-                // Move each icon
+                // Get icons for selected identifiers
+                NSMutableArray *icons = [NSMutableArray array];
                 for (NSString *identifier in selectedIcons) {
+                    // NOTE: Selected app/clip may have been removed; must check for nil
                     SBIcon *icon = [iconModel leafIconForIdentifier:identifier];
-                    if (icon == nil)
-                        // Application has been removed
-                        continue;
+                    if (icon != nil) {
+                        // Remove the "selected" marker
+                        [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
 
-                    // Remove the "selected" marker
-                    [[icon viewWithTag:TAG_CHECKMARK] removeFromSuperview];
+                        // Add to icon array
+                        [icons addObject:icon];
+                    }
+                }
 
-                    SBIconListModel *oldListModel = [[iconModel rootFolder] listContainingIcon:icon];
-                    if (oldListModel == newListModel)
-                        // The icon is already on this page, no need to move
-                        continue;
+                // Move icons
+                if (hasFolderEnhancer_) {
+                    [iconCont folderEnhancerMoveIconsToCurrentIconList:icons];
+                } else {
+                    // Get target list
+                    SBIconListView *newListView = [iconCont currentRootIconList];
+                    SBIconListModel *newListModel = [newListView model];
 
-                    if (![newListView isFull]) {
-                        // Page has a free slot; move icon to this slot
-                        [oldListModel removeIcon:icon];
-                        [oldListModel compactIcons];
+                    SBFolder *rootFolder = [iconModel rootFolder];
+                    for (SBIcon *icon in icons) {
+                        SBIconListModel *oldListModel = [rootFolder listContainingIcon:icon];
+                        if (oldListModel == newListModel)
+                            // The icon is already on this page, no need to move
+                            continue;
 
-                        unsigned int index = [newListView firstFreeSlotIndex];
-                        [newListView placeIcon:icon atIndex:index moveNow:YES pop:YES];
+                        if (![newListView isFull]) {
+                            // Page has a free slot; move icon to this slot
+                            [oldListModel removeIcon:icon];
+                            [oldListModel compactIcons];
+
+                            unsigned int index = [newListView firstFreeSlotIndex];
+                            [newListView placeIcon:icon atIndex:index moveNow:YES pop:YES];
+                        }
                     }
                 }
 
@@ -381,10 +400,22 @@ __attribute__((constructor)) static void init()
     // Determine firmware version
     Class $SBIconList = objc_getClass("SBIconList");
     isFirmware3x_ = ($SBIconList != nil);
-    if (isFirmware3x_)
+    if (isFirmware3x_) {
         isFirmware32_ = (class_getInstanceMethod($SBIconList, @selector(firstFreeSlotX:Y:)) == NULL);
-    else
-        %init(GFirmware4x_SBIconController);
+    } else {
+        // Detect if FolderEnhancer is installed
+        // NOTE: Must ensure that FolderEnhancer is loaded first
+        dlopen("/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib", RTLD_LAZY);
+        Class $SBIconController = objc_getClass("SBIconController");
+        hasFolderEnhancer_ =
+            (class_getInstanceMethod($SBIconController, @selector(folderEnhancerMoveIconsToCurrentIconList:)) != NULL)
+            && (class_getInstanceMethod($SBIconController, @selector(folderEnhancerDropIcons:)) != NULL);
+
+        if (hasFolderEnhancer_)
+            %init(GFirmware4x_FolderEnhancer);
+        else
+            %init(GFirmware4x_Normal);
+    }
 
     %init;
 
