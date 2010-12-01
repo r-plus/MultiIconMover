@@ -11,64 +11,8 @@
  * Last-modified: 2010-12-02 01:23:54
  */
 
-#import <substrate.h>
 
-#import <SpringBoard/SBIcon.h>
-#import <SpringBoard/SBIconController.h>
-#import <SpringBoard/SBIconList.h>
-#import <SpringBoard/SBIconModel.h>
-#import <SpringBoard/SpringBoard.h>
-
-@interface UIView (Geometry)
-@property(assign) CGPoint origin;
-@end
-
-@interface UIImage (UIImagePrivate)
-+ (id)kitImageNamed:(id)named;
-@end
-
-@interface SBIcon (Firmware32)
-+ (CGSize)defaultIconImageSize;
-@end
-@interface SBIcon (Firmware4)
-- (BOOL)isFolderIcon;
-- (id)leafIdentifier;
-@end
-
-@interface SBIconList (Firmware32)
-- (BOOL)firstFreeSlotIndex:(int *)index;
-- (id)placeIcon:(id)icon atIndex:(int)index animate:(BOOL)animate moveNow:(BOOL)now;
-@end
-
-@interface SBIconController (Firmware4)
-- (id)currentRootIconList;
-- (id)openFolder;
-@end
-@interface SBIconController (FolderEnhancer)
-- (BOOL)folderEnhancerMoveIconsToCurrentIconList:(NSArray *)icons;
-- (BOOL)folderEnhancerDropIcons:(NSArray *)icons;
-@end
-
-@interface SBIconModel (Firmware4)
-- (id)rootFolder;
-- (id)leafIconForIdentifier:(NSString *)identifier;
-@end
-
-@interface SBIconListModel : NSObject
-- (void)removeIcon:(id)icon;
-- (void)compactIcons;
-@end
-
-@interface SBIconListView : UIView
-- (id)model;
-- (BOOL)isFull;
-- (unsigned)firstFreeSlotIndex;
-- (id)placeIcon:(id)icon atIndex:(unsigned)index moveNow:(BOOL)now pop:(BOOL)pop;
-@end
-
-@interface SBFolder : NSObject
-- (id)listContainingIcon:(id)icon;
-@end
+#import "Headers.h"
 
 #define TAG_CHECKMARK 2000
 
@@ -391,4 +335,4 @@ __attribute__((constructor)) static void init()
     [pool release];
 }
 
-/* vim: set syntax=objcpp sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
+/* vim: set filetype=objcpp sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
